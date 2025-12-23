@@ -1,0 +1,65 @@
+term,definition,category,example,see_also
+Asset Allocation,"How your money is split across asset types (stocks, bonds, cash, etc.).",portfolio_management,60% stocks / 30% bonds / 10% cash,Diversification; Rebalancing
+Diversification,Spreading investments to reduce the impact of any single asset’s poor performance.,diversification,Owning many stocks instead of one stock,Asset Allocation; Risk
+Stock,A share of ownership in a company.,stocks,Buying 10 shares of a listed company,Equity; Market Capitalization
+Bond,A loan you give to a government or company; they pay interest and return principal later.,bonds,A 10-year government bond pays coupon annually,Coupon; Yield; Duration
+ETF,"A fund that trades on an exchange like a stock, often tracking an index.",etfs,An index ETF tracking Nifty 50 / S&P 500,Index Fund; Expense Ratio
+Mutual Fund,A pooled investment vehicle; you buy units in a managed portfolio.,mutual_funds,A large-cap equity mutual fund,NAV; Expense Ratio
+NAV,Per-unit value of a fund = (assets - liabilities)/units.,mutual_funds,NAV ₹50 means each unit is worth ₹50,Expense Ratio
+Expense Ratio,Annual fee (as %) charged by a fund to manage money.,portfolio_management,"0.2% fee means ₹200 per year per ₹1,00,000",Index Fund
+Index Fund,Fund that aims to match an index rather than beat it.,etfs,S&P 500 index fund,ETF
+Market Capitalization,Company value = share price × shares outstanding.,stocks,"₹1,000 share × 10 crore shares = ₹1,00,000 crore",Large-cap
+Dividend,Company profit paid to shareholders.,stocks,₹10 dividend per share,Dividend Yield
+Dividend Yield,Dividend per share / price.,stocks,₹10 dividend on ₹200 share → 5%,Dividend
+P/E Ratio,Price-to-Earnings ratio: price per share / earnings per share.,stocks,Higher P/E can mean higher growth expectations,EPS
+EPS,Earnings per Share: profit / shares outstanding.,stocks,Used in P/E ratio,P/E Ratio
+Yield,Income return from a bond/dividend as a percentage.,bonds,Bond yield changes as price changes,Coupon
+Coupon,Fixed interest payment on a bond.,bonds,7% coupon on ₹1000 pays ₹70/year,Yield
+Duration,Sensitivity of bond price to interest-rate changes.,bonds,Higher duration → larger price move when rates change,Convexity
+Liquidity,How easily you can buy/sell without large price impact.,market_basics,Large ETFs are usually more liquid,Bid-Ask Spread
+Bid-Ask Spread,Difference between buying (ask) and selling (bid) price.,market_basics,Wider spread increases trading cost,Liquidity
+Volatility,How much prices/returns fluctuate.,risk_and_return,±3% daily swings = high volatility,Standard Deviation
+Standard Deviation,Statistical measure often used to quantify volatility.,risk_and_return,Higher stdev → higher volatility,Volatility
+Beta,How much an asset moves relative to the market.,risk_and_return,Beta 1.2 ≈ 20% more sensitive than market,Correlation
+Correlation,How two assets move together (-1 to +1).,risk_and_return,Low correlation helps diversification,Diversification
+Sharpe Ratio,Risk-adjusted return = (return - risk-free)/volatility.,risk_and_return,Higher Sharpe is generally better,Sortino
+Sortino Ratio,Like Sharpe but uses downside volatility only.,risk_and_return,Penalizes only negative swings,Sharpe Ratio
+Drawdown,Peak-to-trough decline in portfolio value.,risk_and_return,100→80 is 20% drawdown,Max Drawdown
+Max Drawdown,Largest peak-to-trough decline over a period.,risk_and_return,Worst historical fall,Drawdown
+CAGR,Compound Annual Growth Rate: smoothed annual growth rate.,risk_and_return,₹1L→₹2L in 5y ≈ 14.87%,XIRR
+XIRR,"Annualized return for irregular cashflows (SIP, deposits).",goal_planning,Use XIRR for SIP cashflows,CAGR
+SIP,Systematic Investment Plan: periodic investment.,goal_planning,"₹5,000 per month for 5 years",DCA
+DCA,Invest a fixed amount periodically (buy more when price low).,goal_planning,₹10k monthly SIP into index fund,SIP
+Rebalancing,Bringing allocation back to target weights.,portfolio_management,Restore 60/40 after equity rally,Asset Allocation
+Inflation,General rise in prices; reduces purchasing power.,inflation,5% inflation means basket costs 5% more next year,Real Return
+Real Return,Return after subtracting inflation.,inflation,10% nominal - 6% inflation ≈ 4% real,Inflation
+Risk-Free Rate,"Return from safest assets (e.g., treasury bills).",risk_and_return,Used in Sharpe calculations,Sharpe Ratio
+Interest Rate,Cost of borrowing/reward for saving; affects bonds and valuations.,interest_rates,Rising rates can pressure bond prices,Yield
+Stop Loss,Order to sell if price falls to limit loss.,trading,Sell if price falls below ₹X,Risk Management
+Risk Management,Rules to control losses and uncertainty.,risk_and_return,Diversify + position sizing,Stop Loss
+Time Horizon,How long you can stay invested before needing money.,goal_planning,Longer horizon allows more equity,Risk Tolerance
+Risk Tolerance,How much volatility you can handle emotionally/financially.,goal_planning,Low tolerance prefers stable assets,Time Horizon
+Emergency Fund,Cash for unexpected expenses (3–6 months).,portfolio_management,Keep 3–6 months expenses liquid,Liquidity
+Asset Class,"Group of similar investments (equity, debt, cash).",market_basics,Equity vs debt vs cash,Asset Allocation
+Capital Gains,Profit from selling above purchase price.,taxes,"Buy ₹100, sell ₹150 → ₹50 gain",STCG; LTCG
+STCG,Short-term capital gains category (rules vary).,taxes,Selling within short window,LTCG
+LTCG,Long-term capital gains category (rules vary).,taxes,Holding beyond threshold,STCG
+Tax-Loss Harvesting,Selling at a loss to offset gains for tax.,taxes,Reduce taxable gains by harvesting losses,Capital Gains
+Indexation,Tax concept adjusting cost for inflation (varies).,taxes,Inflation adjustment can reduce taxable gain,Inflation
+Concentration Risk,Too much exposure to one asset/sector.,portfolio_management,70% in one stock = high risk,Diversification
+Sector Exposure,Share of portfolio in sectors like IT/Banking.,portfolio_management,Overweight IT sector,Concentration Risk
+Currency Risk,Risk from exchange rate changes for foreign assets.,risk_and_return,USD/INR impacts US returns in INR,Hedging
+Hedging,Reducing risk with an offsetting position.,risk_and_return,Use currency-hedged funds,Currency Risk
+Scenario Analysis,Compare outcomes under multiple assumptions.,goal_planning,8% vs 10% vs 12% return cases,Sensitivity Analysis
+Sensitivity Analysis,How output changes when assumptions change.,goal_planning,SIP changes if inflation rises,Scenario Analysis
+Tracking Error,How closely an index fund follows its index.,etfs,Lower tracking error is better,Index Fund
+Tracking Difference,Actual return difference between fund and index.,etfs,Expense ratio + drag cause difference,Tracking Error
+Active vs Passive,Active tries to beat market; passive tracks an index.,mutual_funds,Index funds are passive,Index Fund
+Risk Premium,Extra return for taking risk vs risk-free asset.,risk_and_return,Equity premium over T-bills,Risk-Free Rate
+Yield Curve,Yields across maturities; shape conveys expectations.,bonds,Inverted curve can signal slowdown,Duration
+Credit Risk,Risk issuer may not pay interest/principal.,bonds,Corporate bonds have more credit risk,Credit Rating
+Credit Rating,Score of issuer’s creditworthiness (AAA..).,bonds,Lower rating = higher default risk,Credit Risk
+Laddering,Buying bonds with staggered maturities.,bonds,Invest in 1y/3y/5y bonds,Duration
+MMR,Max Marginal Relevance: retrieval method to reduce duplicates.,rag,Improves diversity of retrieved chunks,Vector Search
+Vector Search,Semantic search using embeddings.,rag,Retrieve meaning-similar notes,Embeddings
+Embeddings,Numeric representation of text meaning.,rag,Used for vector similarity search,Vector Search

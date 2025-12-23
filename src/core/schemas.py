@@ -154,6 +154,75 @@ class QuantResult(BaseModel):
 # Agent responses
 # -------------------------
 
+
+# -------------------------
+# Tooling + Errors + Tracing (Stage 2)
+# -------------------------
+
+class ErrorEnvelope(BaseModel):
+    code: str
+    message: str
+    details: Optional[Dict[str, Any]] = None
+    retriable: bool = False
+
+
+ToolName = Literal[
+    "RAG_RETRIEVE",
+    "MARKET_QUOTE",
+    "MARKET_SERIES",
+    "NEWS_SEARCH",
+    "QUANT_COMPUTE",
+    "GLOSSARY_LOOKUP",
+]
+
+
+class ToolCall(BaseModel):
+    call_id: str
+    tool_name: ToolName
+    args: Dict[str, Any] = Field(default_factory=dict)
+    started_at: datetime = Field(default_factory=datetime.utcnow)
+    ended_at: Optional[datetime] = None
+    status: Literal["started", "ok", "error"] = "started"
+    error: Optional[ErrorEnvelope] = None
+
+
+class ToolResult(BaseModel):
+    call_id: str
+    tool_name: ToolName
+    result: Optional[Any] = None
+    error: Optional[ErrorEnvelope] = None
+    completed_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class AgentTraceEvent(BaseModel):
+    node: str
+    agent: str
+    ts: datetime = Field(default_factory=datetime.utcnow)
+    info: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentRequest(BaseModel):
+    request_id: str
+    session_id: str
+    turn_id: int
+
+    user_text: str
+    user_profile: UserProfile = Field(default_factory=UserProfile)
+
+    # optional structured inputs
+    portfolio: Optional[PortfolioInput] = None
+    goal: Optional[GoalInput] = None
+
+    # upstream system outputs
+    route: Optional[RouterDecision] = None
+    rag_result: Optional[RagResult] = None
+    quant_result: Optional[QuantResult] = None
+    market_payload: Optional[Dict[str, Any]] = None
+
+    # memory / chat history
+    messages: List[ChatMessage] = Field(default_factory=list)
+    memory_summary: Optional[str] = None
+
 class AgentResponse(BaseModel):
     agent_name: str
     answer_md: str
