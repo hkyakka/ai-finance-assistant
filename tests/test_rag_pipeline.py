@@ -46,3 +46,14 @@ def test_rag_build_and_retrieve(tmp_path: Path, monkeypatch):
     assert c.title
     assert c.url.startswith("http")
     assert c.snippet
+
+
+if __name__ == "__main__":
+    # Manually mimic what pytest does
+    import tempfile
+    from _pytest.monkeypatch import MonkeyPatch
+    
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        mp = MonkeyPatch()
+        test_rag_build_and_retrieve(Path(tmp_dir), mp)
+        print("Test passed successfully!")
