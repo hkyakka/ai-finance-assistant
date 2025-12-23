@@ -23,7 +23,7 @@ rag:
   min_score: 0.2
 
 market_data:
-  primary: alphavantage     # alphavantage | yfinance
+  primary: alphavantage     # alphavantage | yfinance | stooq
   fallback: yfinance
   retries: 3
   timeout_seconds: 20
