@@ -1,0 +1,29 @@
+app:
+  env: dev
+  log_level: INFO
+  cache_ttl_seconds: 1800
+
+paths:
+  kb_manifest: data/kb/knowledge_base_manifest.csv
+  kb_docs_dir: data/kb/docs
+  kb_glossary: data/kb/glossary.csv
+
+#llm:
+#  provider: openai          # openai | ollama | gemini | anthropic
+#  model: gpt-4.1-mini
+#  temperature: 0.2
+llm:
+  provider: gemini
+  model: gemini-2.5-flash
+  temperature: 0.2
+  
+rag:
+  top_k: 5
+  use_mmr: true
+  min_score: 0.2
+
+market_data:
+  primary: alphavantage     # alphavantage | yfinance
+  fallback: yfinance
+  retries: 3
+  timeout_seconds: 20
