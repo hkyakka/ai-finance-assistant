@@ -184,12 +184,14 @@ ToolName = Literal[
 
 class ToolCall(BaseModel):
     call_id: str
-    tool_name: ToolName
-    args: Dict[str, Any] = Field(default_factory=dict)
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    tool_name: str
+    args: dict = {}
+    started_at: datetime
     ended_at: Optional[datetime] = None
     status: Literal["started", "ok", "error"] = "started"
+    result: Optional["ToolResult"] = None
     error: Optional[ErrorEnvelope] = None
+
 
 
 class ToolResult(BaseModel):
