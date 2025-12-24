@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, Field
+from pydantic.config import ConfigDict
 
 
 # -------------------------
@@ -78,6 +79,11 @@ class MarketQuote(BaseModel):
     provider: Optional[str] = None
     from_cache: bool = False
     ttl_seconds: Optional[int] = None
+
+    # Backward/forward compatibility for agents that use `last_price`
+    @property
+    def last_price(self) -> float:
+        return float(self.price)
 
 
 class PriceSeries(BaseModel):
@@ -226,13 +232,23 @@ class AgentRequest(BaseModel):
     memory_summary: Optional[str] = None
 
 class AgentResponse(BaseModel):
+    """Standard agent output.
+
+    Several stages (and the smoke scripts) attach `data` + `error`.
+    Make the model permissive to avoid breaking when agents evolve.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
     agent_name: str
     answer_md: str
+    data: Dict[str, Any] = Field(default_factory=dict)
     citations: List[Citation] = Field(default_factory=list)
     charts_payload: Optional[Dict[str, Any]] = None
     warnings: List[str] = Field(default_factory=list)
     data_freshness: Optional[Dict[str, Any]] = None
     confidence: Literal["high", "medium", "low"] = "medium"
+    error: Optional[Dict[str, Any]] = None
 
 
 # -------------------------
