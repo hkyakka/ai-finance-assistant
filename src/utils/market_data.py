@@ -50,8 +50,8 @@ class MarketDataService:
         self.cache = cache or TTLCache(default_ttl_seconds=SETTINGS.cache_ttl_seconds)
         self.session = requests.Session()
 
-        self.primary = (SETTINGS.market_primary or "alphavantage").lower()
-        self.fallback = (SETTINGS.market_fallback or "yfinance").lower()
+        self.primary = (SETTINGS.market_primary or "yfinance").lower()
+        self.fallback = (SETTINGS.market_fallback or "alphavantage").lower()
         self.retries = int(SETTINGS.market_retries or 3)
         self.timeout = int(SETTINGS.market_timeout_seconds or 20)
 

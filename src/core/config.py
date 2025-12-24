@@ -69,8 +69,8 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
     rag_use_mmr = str(os.getenv("RAG_USE_MMR", _deep_get(cfg, "rag.use_mmr", True))).lower() in ("1", "true", "yes")
     rag_min_score = float(os.getenv("RAG_MIN_SCORE", _deep_get(cfg, "rag.min_score", 0.2)))
 
-    market_primary = os.getenv("MARKET_PRIMARY", _deep_get(cfg, "market_data.primary", "alphavantage"))
-    market_fallback = os.getenv("MARKET_FALLBACK", _deep_get(cfg, "market_data.fallback", "yfinance"))
+    market_primary = os.getenv("MARKET_PRIMARY", _deep_get(cfg, "market_data.primary", "yfinance"))
+    market_fallback = os.getenv("MARKET_FALLBACK", _deep_get(cfg, "market_data.fallback", "alphavantage"))
     market_retries = int(os.getenv("MARKET_RETRIES", _deep_get(cfg, "market_data.retries", 3)))
     market_timeout_seconds = int(os.getenv("MARKET_TIMEOUT_SECONDS", _deep_get(cfg, "market_data.timeout_seconds", 20)))
 
