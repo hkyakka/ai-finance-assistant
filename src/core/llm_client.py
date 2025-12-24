@@ -18,9 +18,15 @@ class LLMClient:
     """
 
     def __init__(self) -> None:
-        provider = (SETTINGS.llm_provider or "").lower()
+        provider = (SETTINGS.llm_provider or "").strip().lower()
+        # Accept common aliases (config.py also normalizes, but keep this defensive).
+        if provider in ("google", "googleai", "google-genai", "genai"):
+            provider = "gemini"
         if provider != "gemini":
-            raise ValueError(f"Stage 1 expects Gemini. Current provider={SETTINGS.llm_provider}")
+            raise ValueError(
+                f"LLM provider mismatch. Expected 'gemini'. Got provider={SETTINGS.llm_provider!r}. "
+                "Fix by setting llm.provider: gemini in config.yaml or LLM_PROVIDER=gemini in your environment."
+            )
 
         # Preferred env var per Gemini docs
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")

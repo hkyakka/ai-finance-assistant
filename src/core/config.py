@@ -61,18 +61,41 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
     kb_docs_dir = os.getenv("KB_DOCS_DIR", _deep_get(cfg, "paths.kb_docs_dir", "data/kb/docs"))
     kb_glossary = os.getenv("KB_GLOSSARY", _deep_get(cfg, "paths.kb_glossary", "data/kb/glossary.csv"))
 
-    llm_provider = os.getenv("LLM_PROVIDER", _deep_get(cfg, "llm.provider", "openai"))
-    llm_model = os.getenv("LLM_MODEL", _deep_get(cfg, "llm.model", "gpt-4.1-mini"))
-    llm_temperature = float(os.getenv("LLM_TEMPERATURE", _deep_get(cfg, "llm.temperature", 0.2)))
+    # IMPORTANT: treat empty env vars as "not set".
+    # On Windows it's easy to end up with LLM_PROVIDER="" in the environment,
+    # which would override config.yaml and break provider selection.
+    def _env_or_cfg(key: str, cfg_path: str, default):
+        v = os.getenv(key)
+        if v is None:
+            return _deep_get(cfg, cfg_path, default)
+        v = v.strip()
+        return _deep_get(cfg, cfg_path, default) if v == "" else v
+
+    llm_provider = _env_or_cfg("LLM_PROVIDER", "llm.provider", "openai")
+    llm_model = _env_or_cfg("LLM_MODEL", "llm.model", "gpt-4.1-mini")
+    llm_temperature = float(_env_or_cfg("LLM_TEMPERATURE", "llm.temperature", 0.2))
+
+    # Normalize common aliases so config and code are consistent.
+    if isinstance(llm_provider, str):
+        lp = llm_provider.strip().lower()
+        if lp in ("google", "googleai", "google-genai", "genai"):
+            llm_provider = "gemini"
+        else:
+            llm_provider = lp
 
     rag_top_k = int(os.getenv("RAG_TOP_K", _deep_get(cfg, "rag.top_k", 5)))
     rag_use_mmr = str(os.getenv("RAG_USE_MMR", _deep_get(cfg, "rag.use_mmr", True))).lower() in ("1", "true", "yes")
     rag_min_score = float(os.getenv("RAG_MIN_SCORE", _deep_get(cfg, "rag.min_score", 0.2)))
 
-    market_primary = os.getenv("MARKET_PRIMARY", _deep_get(cfg, "market_data.primary", "alphavantage"))
-    market_fallback = os.getenv("MARKET_FALLBACK", _deep_get(cfg, "market_data.fallback", "yfinance"))
-    market_retries = int(os.getenv("MARKET_RETRIES", _deep_get(cfg, "market_data.retries", 3)))
-    market_timeout_seconds = int(os.getenv("MARKET_TIMEOUT_SECONDS", _deep_get(cfg, "market_data.timeout_seconds", 20)))
+    market_primary = _env_or_cfg("MARKET_PRIMARY", "market_data.primary", "alphavantage")
+    market_fallback = _env_or_cfg("MARKET_FALLBACK", "market_data.fallback", "yfinance")
+    market_retries = int(_env_or_cfg("MARKET_RETRIES", "market_data.retries", 3))
+    market_timeout_seconds = int(_env_or_cfg("MARKET_TIMEOUT_SECONDS", "market_data.timeout_seconds", 20))
+
+    if isinstance(market_primary, str):
+        market_primary = market_primary.strip().lower()
+    if isinstance(market_fallback, str):
+        market_fallback = market_fallback.strip().lower()
 
     return Settings(
         env=env,
