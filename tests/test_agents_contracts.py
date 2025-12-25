@@ -1,17 +1,23 @@
-from src.core.schemas import AgentRequest, UserProfile
+import uuid
+from src.core.schemas import AgentRequest, UserProfile, GoalInput
 from src.agents.goal_agent import GoalAgent
 from src.agents.portfolio_agent import PortfolioAgent
 
 def test_goal_agent_contract():
     up = UserProfile()
-    payload = {"goal": {"currency":"USD","target_amount":"10000","years":"5","current_savings":"0","monthly_contribution":"100","expected_return_annual":"0.10","inflation_annual":"0.05","stepup_annual_pct":"0"}}
-    out = GoalAgent().run(AgentRequest(user_text="goal", user_profile=up, payload=payload))
+    goal = GoalInput(
+        target_amount=10000,
+        time_horizon_years=5,
+        monthly_investment=100,
+        risk_tolerance="medium"
+    )
+    out = GoalAgent().run(AgentRequest(user_text="goal", user_profile=up, goal=goal, request_id=str(uuid.uuid4()), session_id=str(uuid.uuid4()), turn_id=1))
     assert out.agent_name == "goal_agent"
     assert "Goal projection" in out.answer_md
     assert out.data.get("projection")
 
 def test_portfolio_agent_missing_payload():
     up = UserProfile()
-    out = PortfolioAgent().run(AgentRequest(user_text="portfolio", user_profile=up, payload={}))
+    out = PortfolioAgent().run(AgentRequest(user_text="portfolio", user_profile=up, payload={}, request_id=str(uuid.uuid4()), session_id=str(uuid.uuid4()), turn_id=1))
     assert out.agent_name == "portfolio_agent"
-    assert out.confidence == 0.0
+    assert out.confidence == "low"
