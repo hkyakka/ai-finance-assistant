@@ -4,6 +4,7 @@ from src.core.config import SETTINGS
 from src.utils.logging import setup_logging
 from src.workflow.graph import build_graph
 from src.core.schemas import UserProfile
+from src.pages import chat, portfolio, market, goals
 
 # Setup logging
 setup_logging(SETTINGS.log_level)
@@ -17,17 +18,17 @@ if "session_id" not in st.session_state:
 if "graph" not in st.session_state:
     st.session_state["graph"] = build_graph()
 
-user_text = st.text_input("Ask:", "Analyze my portfolio risk")
+# Create tabs
+tab1, tab2, tab3, tab4 = st.tabs(["Chat", "Portfolio", "Market", "Goals"])
 
-if st.button("Run"):
-    state = {
-        "user_text": user_text,
-        "user_profile": UserProfile(),
-        "session_id": st.session_state["session_id"],
-        "turn_id": 1,
-    }
-    out = st.session_state["graph"].invoke(state)
-    st.markdown(out["final"].answer_md)
-    st.write("Trace:", out.get("agent_trace"))
-    st.write("Request ID:", out.get("request_id"))
-    st.write("Session ID:", out.get("session_id"))
+with tab1:
+    chat.render()
+
+with tab2:
+    portfolio.render()
+
+with tab3:
+    market.render()
+
+with tab4:
+    goals.render()
