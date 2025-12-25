@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, UTC
 
 import pytest
 
@@ -17,7 +17,7 @@ def test_quote_cache_hit(monkeypatch):
 
     def fake_quote(provider, symbol, ttl):
         calls["n"] += 1
-        return type("R", (), {"quote": MarketQuote(symbol=symbol, price=123.0, as_of=datetime.utcnow(), provider=provider), "ttl_seconds": ttl})
+        return type("R", (), {"quote": MarketQuote(symbol=symbol, price=123.0, as_of=datetime.now(UTC), provider=provider), "ttl_seconds": ttl})
 
     monkeypatch.setattr(svc, "_quote_via", fake_quote)
 
@@ -40,7 +40,7 @@ def test_fallback_used(monkeypatch):
     def fake_quote_via(provider, symbol, ttl):
         if provider == "alphavantage":
             raise ProviderUnavailable("down")
-        return type("R", (), {"quote": MarketQuote(symbol=symbol, price=200.0, as_of=datetime.utcnow(), provider=provider), "ttl_seconds": ttl})
+        return type("R", (), {"quote": MarketQuote(symbol=symbol, price=200.0, as_of=datetime.now(UTC), provider=provider), "ttl_seconds": ttl})
 
     monkeypatch.setattr(svc, "_quote_via", fake_quote_via)
 

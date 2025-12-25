@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, UTC
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Tuple
@@ -24,7 +24,7 @@ class Citation(BaseModel):
 class ChatMessage(BaseModel):
     role: Literal["system", "user", "assistant", "tool"] = "user"
     content: str
-    ts: datetime = Field(default_factory=datetime.utcnow)
+    ts: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class UserProfile(BaseModel):
@@ -75,7 +75,7 @@ class MarketQuote(BaseModel):
     symbol: str
     price: float
     currency: str = "USD"
-    as_of: datetime = Field(default_factory=datetime.utcnow)
+    as_of: datetime = Field(default_factory=lambda: datetime.now(UTC))
     provider: Optional[str] = None
     from_cache: bool = False
     ttl_seconds: Optional[int] = None
@@ -90,7 +90,7 @@ class PriceSeries(BaseModel):
     symbol: str
     dates: List[str]           # ISO date strings
     close: List[float]
-    as_of: datetime = Field(default_factory=datetime.utcnow)
+    as_of: datetime = Field(default_factory=lambda: datetime.now(UTC))
     provider: Optional[str] = None
     from_cache: bool = False
 
@@ -199,13 +199,13 @@ class ToolResult(BaseModel):
     tool_name: ToolName
     result: Optional[Any] = None
     error: Optional[ErrorEnvelope] = None
-    completed_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class AgentTraceEvent(BaseModel):
     node: str
     agent: str
-    ts: datetime = Field(default_factory=datetime.utcnow)
+    ts: datetime = Field(default_factory=lambda: datetime.now(UTC))
     info: Dict[str, Any] = Field(default_factory=dict)
 
 
