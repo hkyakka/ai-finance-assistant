@@ -74,6 +74,26 @@ class TaxAgent(BaseAgent):
             chunks = rag.get("chunks", []) if isinstance(rag, dict) else getattr(rag, "chunks", [])
             citations = _chunks_to_citations(chunks)
 
+            # If retriever has low confidence, fall back to web search
+            use_web_fallback = not citations or (citations[0].get("score") or 0.0) < 0.3
+            if use_web_fallback:
+                from src.utils.web_search import web_search_and_summarize
+
+                summary = web_search_and_summarize(query)
+                answer_body = (
+                    "I couldn't find a confident answer in my knowledge base, but here's a summary from the web:\n\n"
+                    + summary
+                )
+                answer_md = DISCLAIMER + "\n\n" + answer_body
+                return AgentResponse(
+                    agent_name=self.name,
+                    answer_md=answer_md,
+                    data={"web_summary": summary},
+                    citations=[],
+                    warnings=["WEB_SEARCH_FALLBACK"],
+                    confidence="medium",
+                )
+
             answer_body = ""
             llm_used = False
             try:
