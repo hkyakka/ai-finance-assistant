@@ -3,7 +3,7 @@ import uuid
 from src.core.config import SETTINGS
 from src.utils.logging import setup_logging
 from src.core.schemas import UserProfile
-from src.pages import chat, portfolio, market, goals
+from src.pages import chat, portfolio, market, goals, tax, news
 
 # Setup logging
 setup_logging(SETTINGS.log_level)
@@ -42,7 +42,7 @@ with st.sidebar:
 # Main UI
 st.title("AI Finance Assistant")
 
-tab_chat, tab_portfolio, tab_market, tab_goals = st.tabs(["Chat", "Portfolio", "Market", "Goals"])
+tab_chat, tab_portfolio, tab_market, tab_goals, tab_tax, tab_news = st.tabs(["Chat", "Portfolio", "Market", "Goals", "Tax", "News"])
 
 with tab_chat:
     chat.render()
@@ -55,3 +55,9 @@ with tab_market:
 
 with tab_goals:
     goals.render()
+
+with tab_tax:
+    tax.render()
+
+with tab_news:
+    news.render()
