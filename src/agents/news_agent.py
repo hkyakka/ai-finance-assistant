@@ -84,36 +84,34 @@ class NewsAgent(BaseAgent):
                     confidence="medium",
                 )
 
-            lines = [NEWS_DISCLAIMER, "", f"## Top news for: **{query}**"]
-            citations: List[Dict[str, Any]] = []
-            for i, a in enumerate(arts, start=1):
-                title = a.get("title") or "Untitled"
-                link = a.get("url") or ""
-                source = (a.get("source") or {}).get("name") or ""
-                desc = a.get("description") or ""
-                lines.append(f"{i}. [{title}]({link}) — *{source}*")
-                if desc:
-                    lines.append(f"   - {desc[:200]}{'…' if len(desc) > 200 else ''}")
+            from src.utils.web_search import summarize_with_gemini
 
+            content_to_summarize = []
+            for art in arts:
+                content_to_summarize.append(f"Title: {art.get('title')}\nContent: {art.get('content') or art.get('description')}")
+
+            summary = summarize_with_gemini("\n\n".join(content_to_summarize), query)
+            answer_md = f"{NEWS_DISCLAIMER}\n\n## Summary of news for: **{query}**\n\n{summary}"
+
+            citations: List[Dict[str, Any]] = []
+            for a in arts:
                 citations.append(
                     {
-                        "doc_id": _news_doc_id(link, title),
-                        "title": title,
-                        "url": link,
-                        "snippet": desc,
+                        "doc_id": _news_doc_id(a.get("url"), a.get("title")),
+                        "title": a.get("title"),
+                        "url": a.get("url"),
+                        "snippet": a.get("description"),
                         "score": None,
                     }
                 )
 
-            confidence = "medium" if arts else "low"
-
             return AgentResponse(
                 agent_name=self.name,
-                answer_md="\n".join(lines),
-                data={"articles": arts},
+                answer_md=answer_md,
+                data={"articles": arts, "summary": summary},
                 citations=citations,
                 warnings=[],
-                confidence=confidence,
+                confidence="medium",
             )
         except Exception as e:
             return AgentResponse(
