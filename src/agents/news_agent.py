@@ -66,6 +66,24 @@ class NewsAgent(BaseAgent):
             payload = r.json()
             arts = (payload.get("articles") or [])[:5]
 
+            if not arts:
+                from src.utils.web_search import web_search_and_summarize
+
+                summary = web_search_and_summarize(query)
+                answer_body = (
+                    "I couldn't find any recent news articles for your query, but here's a summary from the web:\n\n"
+                    + summary
+                )
+                answer_md = f"{NEWS_DISCLAIMER}\n\n{answer_body}"
+                return AgentResponse(
+                    agent_name=self.name,
+                    answer_md=answer_md,
+                    data={"web_summary": summary},
+                    citations=[],
+                    warnings=["WEB_SEARCH_FALLBACK"],
+                    confidence="medium",
+                )
+
             lines = [NEWS_DISCLAIMER, "", f"## Top news for: **{query}**"]
             citations: List[Dict[str, Any]] = []
             for i, a in enumerate(arts, start=1):
