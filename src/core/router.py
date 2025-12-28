@@ -15,7 +15,7 @@ class Router:
     def __init__(self) -> None:
         # Simple keyword rules (tune as you learn evaluator prompts)
         self._rules = [
-            ("TAX", r"\b(tax|ltcg|stcg|capital gain|dividend tax|tds)\b"),
+            ("TAX", r"\b(tax|income tax|income|earnings|withholding|withhold|ltcg|stcg|capital gain|capital gains|dividend tax|tds)\b"),
             ("NEWS", r"\b(news|headline|breaking|why is.*down|why is.*up)\b"),
             ("GOAL", r"\b(goal|retire|retirement|target|years|months|sip|required sip|plan)\b"),
             ("PORTFOLIO", r"\b(portfolio|holdings|allocation|diversif|rebalance|weights|overexposed)\b"),
