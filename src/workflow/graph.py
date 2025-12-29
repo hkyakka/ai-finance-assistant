@@ -107,6 +107,10 @@ def router_node(state: Dict[str, Any]) -> Dict[str, Any]:
         state["route"] = "MARKET"
     elif source_tab == "News":
         state["route"] = "NEWS"
+    elif source_tab == "Portfolio":
+        state["route"] = "PORTFOLIO"
+    elif source_tab == "Tax":
+        state["route"] = "TAX"
     else:
         state["route"] = route_query(state)
 

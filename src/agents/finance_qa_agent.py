@@ -40,7 +40,7 @@ class FinanceQAAgent(BaseAgent):
         # Load the FAISS index
         embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
         index_dir = os.getenv("KB_INDEX_DIR", "data/kb/index")
-        vectorstore = FAISS.load_local(index_dir, embeddings, allow_dangerous_deserialization=True)
+        vectorstore = FAISS.load_local(index_dir, embeddings, allow_dangerous_deserialization=True, index_name="index")
         retriever = vectorstore.as_retriever()
 
         # Create a prompt template

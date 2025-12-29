@@ -14,7 +14,7 @@ llm = llm()
 class RouteQuery(BaseModel):
     """Route a user query to the most relevant datasource."""
 
-    datasource: Literal["FINANCE_QA", "TAX", "NEWS", "MARKET", "GOAL", "PORTFOLIO"] = Field(
+    datasource: Literal["FINANCE_QA", "TAX"] = Field(
         ...,
         description="Given a user question, which datasource would be most relevant for answering their question.",
     )
