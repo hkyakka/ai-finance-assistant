@@ -12,7 +12,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from src.agents.base_agent import BaseAgent
 from src.core.schemas import AgentRequest, AgentResponse
@@ -38,7 +38,7 @@ class FinanceQAAgent(BaseAgent):
 
     def run(self, req: AgentRequest) -> AgentResponse:
         # Load the FAISS index
-        embeddings = OpenAIEmbeddings()
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
         index_dir = os.getenv("KB_INDEX_DIR", "data/kb/index")
         vectorstore = FAISS.load_local(index_dir, embeddings, allow_dangerous_deserialization=True)
         retriever = vectorstore.as_retriever()

@@ -2,12 +2,20 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+
 from src.agents.base_agent import BaseAgent
 from src.core.config import SETTINGS
 from src.core.schemas import AgentRequest, AgentResponse, ErrorEnvelope
 from src.rag.retriever import Retriever
 from src.rag.web_search import WebSearchClient
 from src.utils.answer_format import format_citations_md
+from src.utils.llm_init import llm
+
+# Initialize the LLM
+llm = llm()
 
 DISCLAIMER = (
     "**Disclaimer:** I’m not a tax professional. This is general education only. "
@@ -101,33 +109,37 @@ def _build_context(citations: List[Dict[str, Any]], max_items: int = 8) -> str:
     return "\n".join(lines).strip()
 
 
-def _build_prompt(user_text: str, context: str) -> str:
+def _build_prompt() -> ChatPromptTemplate:
     """
     Prompt is deliberately structured so:
       - it answers even when context is empty,
       - it asks for missing info when required,
       - it avoids giving personalized filing advice.
     """
-    return (
-        "You are a tax education assistant.\n"
-        "You can answer from general knowledge, and you should use the provided context when it helps.\n\n"
-        "Safety / quality rules:\n"
-        "1) Do NOT give personalized filing instructions or tell the user exactly what to put on a tax return.\n"
-        "2) If the question depends on missing facts (country/state, tax year, filing status, residency, cost basis, "
-        "holding period, ordinary-income bracket, whether it's profit vs withdrawal), ask concise follow-ups.\n"
-        "3) If you estimate anything, label it clearly as an assumption and give a range or a formula.\n"
-        "4) Prefer plain language. Use headings + bullets. Keep calculations simple.\n\n"
-        "Output format (markdown):\n"
-        "## Answer\n"
-        "(1–3 sentences)\n\n"
-        "## Details\n"
-        "- bullets\n\n"
-        "## Example\n"
-        "- one short example\n\n"
-        "## What to confirm\n"
-        "- bullets with missing info + what to verify in official guidance\n\n"
-        f"User question: {user_text.strip()}\n\n"
-        f"Context (may be empty):\n{context if context else '(no retrieved context)'}\n"
+    return ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a tax education assistant.\n"
+                "You can answer from general knowledge, and you should use the provided context when it helps.\n\n"
+                "Safety / quality rules:\n"
+                "1) Do NOT give personalized filing instructions or tell the user exactly what to put on a tax return.\n"
+                "2) If the question depends on missing facts (country/state, tax year, filing status, residency, cost basis, "
+                "holding period, ordinary-income bracket, whether it's profit vs withdrawal), ask concise follow-ups.\n"
+                "3) If you estimate anything, label it clearly as an assumption and give a range or a formula.\n"
+                "4) Prefer plain language. Use headings + bullets. Keep calculations simple.\n\n"
+                "Output format (markdown):\n"
+                "## Answer\n"
+                "(1–3 sentences)\n\n"
+                "## Details\n"
+                "- bullets\n\n"
+                "## Example\n"
+                "- one short example\n\n"
+                "## What to confirm\n"
+                "- bullets with missing info + what to verify in official guidance\n\n"
+            ),
+            ("human", "User question: {question}\n\nContext (may be empty):\n{context}\n"),
+        ]
     )
 
 
@@ -198,11 +210,13 @@ class TaxAgent(BaseAgent):
             answer_body = ""
             llm_used = False
             try:
-                from src.core.llm_client import LLMClient
-
-                llm = LLMClient()
-                prompt = _build_prompt(query, context)
-                answer_body = (llm.generate(prompt).text or "").strip()
+                prompt = _build_prompt()
+                chain = (
+                    prompt
+                    | llm
+                    | StrOutputParser()
+                )
+                answer_body = chain.invoke({"question": query, "context": context})
                 llm_used = True
             except Exception:
                 warnings.append("LLM_UNAVAILABLE")

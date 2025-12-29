@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def llm() -> ChatOpenAI:
-    """Initializes and returns a ChatOpenAI instance."""
-    return ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
+def llm() -> ChatGoogleGenerativeAI:
+    """Initializes and returns a ChatGoogleGenerativeAI instance."""
+    return ChatGoogleGenerativeAI(model="gemini-pro", temperature=0)
