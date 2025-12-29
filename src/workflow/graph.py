@@ -7,6 +7,8 @@ from uuid import uuid4
 from langgraph.graph import END, START, StateGraph
 
 from src.agents.finance_qa_agent import FinanceQAAgent
+from src.agents.news_agent import NewsAgent
+from src.agents.tax_agent import TaxAgent
 from src.core.schemas import (
     AgentRequest,
     AgentResponse,
@@ -20,6 +22,7 @@ from src.core.schemas import (
 from src.rag.retriever import Retriever
 from src.tools.quant_tools import tool_compute_goal_projection
 from src.utils.market_data import MarketDataService
+from src.workflow.router import route_query
 
 
 # -----------------------------
@@ -85,19 +88,6 @@ def _extract_symbol(text: str) -> str:
     return "AAPL"
 
 
-def _route(state: Dict[str, Any]) -> str:
-    # Explicit objects win
-    if state.get("goal") is not None:
-        return "GOAL"
-    if state.get("portfolio") is not None:
-        return "PORTFOLIO"
-
-    text = (state.get("user_text") or "").lower()
-    if "price" in text or "quote" in text or "market" in text:
-        return "MARKET"
-    return "FINANCE_QA"
-
-
 # -----------------------------
 # Nodes
 # -----------------------------
@@ -109,7 +99,17 @@ def router_node(state: Dict[str, Any]) -> Dict[str, Any]:
     state.setdefault("request_id", str(uuid4()))
     state.setdefault("user_profile", UserProfile())
     _append_trace(state, "RouterNode")
-    state["route"] = _route(state)
+
+    source_tab = state.get("source_tab")
+    if source_tab == "Goal":
+        state["route"] = "GOAL"
+    elif source_tab == "Market":
+        state["route"] = "MARKET"
+    elif source_tab == "News":
+        state["route"] = "NEWS"
+    else:
+        state["route"] = route_query(state)
+
     return state
 
 
@@ -139,6 +139,34 @@ def financeqa_node(state: Dict[str, Any]) -> Dict[str, Any]:
         request_id=state.get("request_id"),
     )
     resp = FinanceQAAgent().run(req)
+    state["final"] = resp
+    return state
+
+
+def news_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    _append_trace(state, "NewsNode")
+    req = AgentRequest(
+        user_text=state.get("user_text") or "",
+        user_profile=state.get("user_profile") or UserProfile(),
+        session_id=state.get("session_id", "local"),
+        turn_id=state.get("turn_id", 0),
+        request_id=state.get("request_id"),
+    )
+    resp = NewsAgent().run(req)
+    state["final"] = resp
+    return state
+
+
+def tax_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    _append_trace(state, "TaxNode")
+    req = AgentRequest(
+        user_text=state.get("user_text") or "",
+        user_profile=state.get("user_profile") or UserProfile(),
+        session_id=state.get("session_id", "local"),
+        turn_id=state.get("turn_id", 0),
+        request_id=state.get("request_id"),
+    )
+    resp = TaxAgent().run(req)
     state["final"] = resp
     return state
 
@@ -268,6 +296,8 @@ def build_graph():
 
     g.add_node("rag", rag_retrieve_node)
     g.add_node("financeqa", financeqa_node)
+    g.add_node("news", news_node)
+    g.add_node("tax", tax_node)
 
     g.add_node("market_data", market_data_node)
     g.add_node("market_resp", market_response_node)
@@ -284,6 +314,8 @@ def build_graph():
         lambda s: s.get("route", "FINANCE_QA"),
         {
             "FINANCE_QA": "rag",
+            "NEWS": "news",
+            "TAX": "tax",
             "MARKET": "market_data",
             "PORTFOLIO": "market_data",
             "GOAL": "quant",
@@ -293,6 +325,12 @@ def build_graph():
     # FinanceQA path
     g.add_edge("rag", "financeqa")
     g.add_edge("financeqa", END)
+
+    # News path
+    g.add_edge("news", END)
+
+    # Tax path
+    g.add_edge("tax", END)
 
     # market_data branches based on route (market vs portfolio)
     g.add_conditional_edges(

@@ -5,8 +5,8 @@ from decimal import Decimal
 import uuid
 from typing import Optional
 
-from src.agents.goal_agent import GoalAgent
-from src.core.schemas import AgentRequest, AgentResponse
+from src.web_app.agent_helpers import _run_chat_agent
+from src.core.schemas import AgentResponse
 
 def _monthly_rate(r_annual: float) -> float:
     return float((Decimal(1) + Decimal(str(r_annual))) ** (Decimal(1) / Decimal(12)) - Decimal(1))
@@ -72,15 +72,7 @@ def render():
                 "stepup_annual_pct": str(stepup_annual_pct),
             }
             try:
-                req = AgentRequest(
-                    request_id=str(uuid.uuid4()),
-                    session_id=st.session_state["session_id"],
-                    turn_id=int(st.session_state["turn_id"] + 1),
-                    user_text="goal projection",
-                    user_profile=st.session_state["user_profile"],
-                    market_payload={"goal": goal_payload},
-                )
-                resp = GoalAgent().run(req)
+                resp, _ = _run_chat_agent("goal projection", "Goal")
                 st.session_state["_goal_resp"] = resp
                 st.session_state["_goal_inputs"] = goal_payload
             except Exception as e:

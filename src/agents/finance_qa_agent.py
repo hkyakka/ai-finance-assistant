@@ -5,68 +5,88 @@ Note: Keep math minimal; do not compute numerically here. Use Quant tools for co
 
 from __future__ import annotations
 
-from typing import List
+import os
+from typing import List, Dict
+
+from langchain_community.vectorstores import FAISS
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
+from langchain_openai import OpenAIEmbeddings
 
 from src.agents.base_agent import BaseAgent
-from src.core.llm_client import LLMClient
-from src.core.schemas import AgentRequest, AgentResponse, RagResult, RagChunk
-from src.rag.retriever import Retriever
+from src.core.schemas import AgentRequest, AgentResponse
+from src.utils.llm_init import llm
 
+# Initialize the LLM
+llm = llm()
 
-def _build_prompt(user_text: str, rag: RagResult) -> str:
+def format_docs(docs: List[Dict]) -> str:
+    """Format the retrieved documents for the prompt."""
     ctx_lines: List[str] = []
-    for i, c in enumerate(rag.chunks or [], start=1):
+    for i, doc in enumerate(docs, start=1):
         ctx_lines.append(
-            f"[{i}] {c.title}\nURL: {c.url}\nSnippet: {c.snippet}\n"
+            f"[{i}] {doc.metadata.get('title', '')}\n"
+            f"URL: {doc.metadata.get('url', '')}\n"
+            f"Snippet: {doc.page_content}\n"
         )
-    context = "\n".join(ctx_lines) if ctx_lines else "(no retrieved context)"
-
-    return (
-        "You are a finance education assistant.\n"
-        "Answer the user using ONLY the provided context.\n"
-        "If the context is insufficient, say so and ask a brief follow-up.\n\n"
-        f"USER QUESTION: {user_text}\n\n"
-        f"CONTEXT:\n{context}\n\n"
-        "Write a short, clear answer in markdown.\n"
-    )
+    return "\n".join(ctx_lines) if ctx_lines else "(no retrieved context)"
 
 
 class FinanceQAAgent(BaseAgent):
     name = "FinanceQAAgent"
 
     def run(self, req: AgentRequest) -> AgentResponse:
-        # Retrieve context (patched in tests)
-        retriever = Retriever()
-        rag = retriever.retrieve(
-            query=req.user_text,
-            top_k=5,
-            use_mmr=True,
-            mmr_lambda=0.5,
-            min_score=0.05,
+        # Load the FAISS index
+        embeddings = OpenAIEmbeddings()
+        index_dir = os.getenv("KB_INDEX_DIR", "data/kb/index")
+        vectorstore = FAISS.load_local(index_dir, embeddings, allow_dangerous_deserialization=True)
+        retriever = vectorstore.as_retriever()
+
+        # Create a prompt template
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "You are a finance education assistant.\n"
+                    "Answer the user using ONLY the provided context.\n"
+                    "If the context is insufficient, say so and ask a brief follow-up.\n\n"
+                    "CONTEXT:\n{context}\n\n",
+                ),
+                ("human", "{question}"),
+            ]
         )
 
-        prompt = _build_prompt(req.user_text, rag)
-        llm = LLMClient()
-        llm_resp = llm.generate(prompt)
+        # Create a chain
+        rag_chain = (
+            {"context": retriever, "question": RunnablePassthrough()}
+            | RunnablePassthrough.assign(
+                answer=(
+                    RunnableLambda(lambda x: {"context": format_docs(x["context"]), "question": x["question"]})
+                    | prompt
+                    | llm
+                    | StrOutputParser()
+                )
+            )
+        )
 
-        # Build citations from RagChunk fields. We intentionally pass dicts to avoid
-        # importing a citation class name that might vary across schema versions.
+        # Invoke the chain
+        result = rag_chain.invoke(req.user_text)
+        answer_md = result["answer"]
+
+        # Build citations from the retrieved documents
         citations = []
-        for c in rag.chunks or []:
+        for doc in result["context"]:
             citations.append(
                 {
-                    "doc_id": c.doc_id,
-                    "chunk_id": getattr(c, "chunk_id", None),
-                    "title": c.title,
-                    "url": c.url,
-                    "snippet": c.snippet,
-                    "score": getattr(c, "score", None),
+                    "doc_id": doc.metadata.get("doc_id"),
+                    "chunk_id": doc.metadata.get("chunk_id"),
+                    "title": doc.metadata.get("title"),
+                    "url": doc.metadata.get("url"),
+                    "snippet": doc.page_content,
+                    "score": doc.metadata.get("score"),
                 }
             )
-
-        answer_md = (llm_resp.text or "").strip()
-        if not answer_md:
-            answer_md = "I couldn't generate an answer from the provided context."
 
         warnings = []
         if not citations:

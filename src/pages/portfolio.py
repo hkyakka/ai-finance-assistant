@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any, Dict, List
 import uuid
 
-from src.agents.portfolio_agent import PortfolioAgent
+from src.web_app.agent_helpers import _run_chat_agent
 from src.core.schemas import AgentRequest
 
 def _parse_portfolio_csv(df: pd.DataFrame) -> Dict[str, Any]:
@@ -80,15 +80,7 @@ def render():
             if st.button("Analyze portfolio", type="primary"):
                 try:
                     pf_payload = _parse_portfolio_csv(df)
-                    req = AgentRequest(
-                        request_id=str(uuid.uuid4()),
-                        session_id=st.session_state["session_id"],
-                        turn_id=int(st.session_state["turn_id"] + 1),
-                        user_text="analyze portfolio",
-                        user_profile=st.session_state["user_profile"],
-                        market_payload={"portfolio": pf_payload},
-                    )
-                    resp = PortfolioAgent().run(req)
+                    resp, _ = _run_chat_agent("analyze portfolio", "Portfolio")
                     st.markdown(resp.answer_md)
 
                     metrics = (resp.data or {}).get("metrics") or {}

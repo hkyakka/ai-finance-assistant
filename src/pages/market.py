@@ -6,8 +6,8 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from src.agents.market_agent import MarketAgent
-from src.core.schemas import AgentRequest, AgentResponse
+from src.web_app.agent_helpers import _run_chat_agent
+from src.core.schemas import AgentResponse
 from src.utils.market_data import MarketDataService
 from src.web_app.ui_helpers import _freshness_badge, _badge
 
@@ -24,15 +24,7 @@ def render():
 
         if st.button("Fetch", type="primary"):
             try:
-                req = AgentRequest(
-                    request_id=str(uuid.uuid4()),
-                    session_id=st.session_state["session_id"],
-                    turn_id=int(st.session_state["turn_id"] + 1),
-                    user_text=f"quote {symbol}",
-                    user_profile=st.session_state["user_profile"],
-                    market_payload={"symbol": symbol},
-                )
-                resp = MarketAgent().run(req)
+                resp, _ = _run_chat_agent(f"quote {symbol}", "Market")
                 st.session_state["_market_resp"] = resp
 
                 svc = MarketDataService()
