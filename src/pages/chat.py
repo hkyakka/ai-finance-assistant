@@ -26,7 +26,7 @@ def render():
         if user_text:
             st.session_state["chat"].append({"role": "user", "content": user_text, "meta": {}})
 
-            resp, meta = _run_chat_agent(user_text)
+            resp, meta = _run_chat_agent(user_text, "Chat")
 
             st.session_state["last_chat_meta"] = {
                 "agent_name": resp.agent_name,
