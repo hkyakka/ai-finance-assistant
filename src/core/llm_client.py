@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
+from typing import Any
 
-from src.core.config import SETTINGS
+from src.core.langchain_factory import get_chat_model
 
 
 @dataclass
@@ -12,54 +12,23 @@ class LLMResponse:
 
 
 class LLMClient:
+    """Thin wrapper kept for backward compatibility.
+
+    Existing agents/tests call:
+      - LLMClient().generate(prompt) -> LLMResponse(text=...)
     """
-    Stage 1: Gemini via the new Google GenAI SDK (google-genai).
-    Docs show: from google import genai; client = genai.Client(); client.models.generate_content(...)
-    """
 
-    def __init__(self) -> None:
-        provider = (SETTINGS.llm_provider or "").strip().lower()
-        # Accept common aliases (config.py also normalizes, but keep this defensive).
-        if provider in ("google", "googleai", "google-genai", "genai"):
-            provider = "gemini"
-        if provider != "gemini":
-            raise ValueError(
-                f"LLM provider mismatch. Expected 'gemini'. Got provider={SETTINGS.llm_provider!r}. "
-                "Fix by setting llm.provider: gemini in config.yaml or LLM_PROVIDER=gemini in your environment."
-            )
-
-        # Preferred env var per Gemini docs
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise RuntimeError("Set GEMINI_API_KEY in .env (or GOOGLE_API_KEY as fallback)")
-
-        # New SDK
-        from google import genai  # pip install google-genai
-
-        # You can pass api_key explicitly OR rely on GEMINI_API_KEY env var.
-        self._client = genai.Client(api_key=api_key)
+    def __init__(self, *, temperature: float | None = None) -> None:
+        self._model: Any = get_chat_model(temperature=temperature)
 
     def generate(self, prompt: str) -> LLMResponse:
-        resp = self._client.models.generate_content(
-            model=SETTINGS.llm_model,
-            contents=prompt,
-            # Keep generation config simple in Stage 1
-            config={
-                "temperature": float(SETTINGS.llm_temperature),
-            },
-        )
-
-        # resp.text exists in the new SDK quickstart examples
-        text = getattr(resp, "text", "") or ""
-        return LLMResponse(text=text.strip())
+        # LangChain chat models accept a string prompt; they return a BaseMessage.
+        msg = self._model.invoke(prompt)
+        text = getattr(msg, "content", None)
+        if text is None:
+            text = str(msg)
+        return LLMResponse(text=str(text).strip())
 
     def list_models(self) -> list[str]:
-        """
-        Helpful debug utility when you get 'model not found'.
-        """
-        models = []
-        for m in self._client.models.list():
-            name = getattr(m, "name", None)
-            if name:
-                models.append(name)
-        return models
+        # Model listing is provider-specific; keep as a safe no-op.
+        return []
