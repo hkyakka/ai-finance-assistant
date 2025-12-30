@@ -1,97 +1,39 @@
 from __future__ import annotations
 
 import hashlib
-import os
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
-import numpy as np
-
-
-def _normalize_rows(x: np.ndarray) -> np.ndarray:
-    # L2 normalize for cosine similarity via dot product
-    norms = np.linalg.norm(x, axis=1, keepdims=True) + 1e-12
-    return (x / norms).astype(np.float32)
+# langchain-core provides the Embeddings interface in v0.2+
+try:
+    from langchain_core.embeddings import Embeddings
+except Exception:  # pragma: no cover
+    Embeddings = object  # type: ignore
 
 
-class BaseEmbedder:
-    name: str
+@dataclass(frozen=True)
+class HashEmbeddings(Embeddings):
+    """Deterministic, offline embeddings.
 
-    def embed_texts(self, texts: List[str]) -> np.ndarray:
-        raise NotImplementedError
-
-    def embed_query(self, text: str) -> np.ndarray:
-        return self.embed_texts([text])[0:1]
-
-
-@dataclass
-class HashEmbedder(BaseEmbedder):
+    This is intentionally simple so tests run without downloading models or calling APIs.
     """
-    Deterministic, dependency-free embedder.
-    Not semantic like transformer embeddings, but works for Stage-4 plumbing and tests.
 
-    Uses hashing trick over tokens -> dense vector.
-    """
-    dim: int = 768
-    name: str = "hash"
+    dim: int = 384
 
-    def embed_texts(self, texts: List[str]) -> np.ndarray:
-        mat = np.zeros((len(texts), self.dim), dtype=np.float32)
-        for i, t in enumerate(texts):
-            # Basic tokenization
-            tokens = [tok for tok in _simple_tokens(t) if tok]
-            for tok in tokens:
-                h = int(hashlib.md5(tok.encode("utf-8")).hexdigest(), 16)
-                idx = h % self.dim
-                sign = 1.0 if (h >> 1) % 2 == 0 else -1.0
-                mat[i, idx] += sign
-        return _normalize_rows(mat)
+    def _vec(self, text: str) -> List[float]:
+        # Expand sha256 digest to dim floats in [0, 1].
+        data = (text or "").encode("utf-8", errors="ignore")
+        digest = hashlib.sha256(data).digest()
+        out: List[float] = []
+        i = 0
+        while len(out) < self.dim:
+            b = digest[i % len(digest)]
+            out.append(float(b) / 255.0)
+            i += 1
+        return out
 
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        return [self._vec(t) for t in texts]
 
-class SentenceTransformerEmbedder(BaseEmbedder):
-    """
-    Optional semantic embedder. Requires: sentence-transformers.
-    """
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
-        from sentence_transformers import SentenceTransformer  # type: ignore
-        self._model = SentenceTransformer(model_name)
-        self.name = f"sentence_transformers:{model_name}"
-
-    def embed_texts(self, texts: List[str]) -> np.ndarray:
-        vecs = self._model.encode(texts, normalize_embeddings=True)
-        return np.asarray(vecs, dtype=np.float32)
-
-
-def _simple_tokens(text: str) -> List[str]:
-    text = text.lower()
-    # keep letters/numbers
-    out = []
-    cur = []
-    for ch in text:
-        if ch.isalnum():
-            cur.append(ch)
-        else:
-            if cur:
-                out.append("".join(cur))
-                cur = []
-    if cur:
-        out.append("".join(cur))
-    return out
-
-
-def get_embedder() -> BaseEmbedder:
-    """
-    Chooses embedder based on env var:
-      RAG_EMBEDDER=hash | sentence_transformers
-      RAG_EMBEDDING_MODEL=all-MiniLM-L6-v2
-    Falls back to HashEmbedder if sentence-transformers is not installed.
-    """
-    choice = (os.getenv("RAG_EMBEDDER") or "hash").strip().lower()
-    if choice in ("st", "sentence", "sentence_transformers", "sbert"):
-        model = os.getenv("RAG_EMBEDDING_MODEL") or "all-MiniLM-L6-v2"
-        try:
-            return SentenceTransformerEmbedder(model_name=model)
-        except Exception:
-            # fall back
-            return HashEmbedder()
-    return HashEmbedder()
+    def embed_query(self, text: str) -> List[float]:
+        return self._vec(text)

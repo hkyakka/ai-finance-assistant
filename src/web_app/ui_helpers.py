@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import streamlit as st
 import pandas as pd
 
+from typing import Any, Dict, List
 def _badge(text: str, kind: str = "info") -> None:
     """Small colored badge using HTML."""
     color = {
@@ -54,17 +55,47 @@ def _render_citations(citations: List[Dict[str, Any]] | List[Any]) -> None:
             st.caption(snippet)
 
 
-def _render_agent_trace(trace: List[str] | None, router_decision: Optional[Dict[str, Any]] = None) -> None:
-    if router_decision:
-        st.markdown(
-            f"**Route:** `{router_decision.get('intent')}` (conf {router_decision.get('confidence', 0):.2f})"
-        )
-        if router_decision.get("rationale"):
-            st.caption(router_decision["rationale"])
+
+def _render_agent_trace(trace: List[str] | None, router_decision: Any = None) -> None:
+    """Render the LangGraph trace and router decision.
+
+    router_decision may be:
+      - dict (preferred)
+      - str (route name like 'FINANCE_QA')
+      - None
+    """
+    rd: Dict[str, Any] = {}
+    if isinstance(router_decision, dict):
+        rd = router_decision
+    elif isinstance(router_decision, str):
+        rd = {"intent": router_decision, "confidence": 1.0}
+    elif router_decision is not None:
+        # Best-effort coercion (e.g., pydantic model)
+        if hasattr(router_decision, "model_dump"):
+            try:
+                rd = router_decision.model_dump()  # type: ignore[attr-defined]
+            except Exception:
+                rd = {}
+        else:
+            rd = {}
+
+    if rd:
+        intent = rd.get("intent") or rd.get("route") or rd.get("agent") or "unknown"
+        conf = rd.get("confidence", 0.0)
+        try:
+            conf_f = float(conf)
+        except Exception:
+            conf_f = 0.0
+        st.markdown(f"**Route:** `{intent}` (conf {conf_f:.2f})")
+        rationale = rd.get("rationale") or rd.get("reason")
+        if rationale:
+            st.caption(str(rationale))
+
     if not trace:
         st.caption("No trace")
         return
     st.code("\n".join([f"- {t}" for t in trace]), language="text")
+
 
 def _now_utc() -> datetime:
     return datetime.now(timezone.utc)

@@ -57,6 +57,7 @@ class ConversationStateModel(BaseModel):
     turn_id: int = 0
 
     user_text: str = ""
+    source_tab: Optional[str] = None
     user_profile: UserProfile = Field(default_factory=UserProfile)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -66,6 +67,7 @@ class ConversationStateModel(BaseModel):
     memory_turns: List[Dict[str, str]] = Field(default_factory=list)
 
     route: Optional[RouterDecision] = None
+    router_decision: Optional[RouterDecision] = None
 
     agent_trace: List[str] = Field(default_factory=list)
     trace_events: List[AgentTraceEvent] = Field(default_factory=list)

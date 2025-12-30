@@ -30,7 +30,22 @@ class GoalAgent(BaseAgent):
             if not goal:
                 return AgentResponse(
                     agent_name=self.name,
-                    answer_md="Please provide a goal in `AgentRequest.goal` (preferred) or `market_payload.goal`.",
+                    answer_md=(
+                        "## Goal projection\n"
+                        "I can compute a goal projection, but I need a few inputs.\n\n"
+                        "Please provide either:\n"
+                        "- `AgentRequest.goal` (preferred), or\n"
+                        "- `market_payload.goal`\n\n"
+                        "Minimum fields:\n"
+                        "- target amount\n"
+                        "- time horizon (years)\n"
+                        "Optionally:\n"
+                        "- monthly investment\n"
+                        "- initial investment\n"
+                        "- inflation %\n"
+                        "- risk tolerance\n\n"
+                        "Tip: use the **Goals** tab to enter these values."
+                    ),
                     data={},
                     citations=[],
                     warnings=["MISSING_GOAL_PAYLOAD"],

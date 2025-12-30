@@ -7,6 +7,10 @@ from uuid import uuid4
 from langgraph.graph import END, START, StateGraph
 
 from src.agents.finance_qa_agent import FinanceQAAgent
+from src.agents.goal_agent import GoalAgent
+from src.agents.tax_agent import TaxAgent
+from src.agents.news_agent import NewsAgent
+from src.core.router import Router
 from src.core.schemas import (
     AgentRequest,
     AgentResponse,
@@ -85,31 +89,24 @@ def _extract_symbol(text: str) -> str:
     return "AAPL"
 
 
-def _route(state: Dict[str, Any]) -> str:
-    # Explicit objects win
-    if state.get("goal") is not None:
-        return "GOAL"
-    if state.get("portfolio") is not None:
-        return "PORTFOLIO"
-
-    text = (state.get("user_text") or "").lower()
-    if "price" in text or "quote" in text or "market" in text:
-        return "MARKET"
-    return "FINANCE_QA"
-
-
-# -----------------------------
-# Nodes
-# -----------------------------
-
 def router_node(state: Dict[str, Any]) -> Dict[str, Any]:
     # normalize required keys
     state.setdefault("session_id", "local")
     state.setdefault("turn_id", 0)
     state.setdefault("request_id", str(uuid4()))
     state.setdefault("user_profile", UserProfile())
+
     _append_trace(state, "RouterNode")
-    state["route"] = _route(state)
+
+    router = Router()
+    decision = router.decide(
+        user_text=(state.get("user_text") or ""),
+        source_tab=state.get("source_tab"),
+        has_goal=state.get("goal") is not None,
+        has_portfolio=state.get("portfolio") is not None,
+    )
+    state["route"] = decision.intent
+    state["router_decision"] = decision
     return state
 
 
@@ -178,7 +175,12 @@ def quant_compute_node(state: Dict[str, Any]) -> Dict[str, Any]:
     try:
         route = state.get("route")
         if route == "GOAL":
-            goal: GoalInput = state.get("goal")
+            goal: Optional[GoalInput] = state.get("goal")
+            if goal is None:
+                _tool_end_error(state, call_id, tool_name, "MISSING_GOAL_INPUT", "No goal payload supplied.")
+                state["quant_result"] = None
+                return state
+
             proj = tool_compute_goal_projection(goal.model_dump() if hasattr(goal, "model_dump") else dict(goal))
             state["quant_result"] = {"projection": proj}
             _tool_end_ok(state, call_id, tool_name, {"kind": "goal_projection"})
@@ -230,29 +232,17 @@ def market_response_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
 def goal_node(state: Dict[str, Any]) -> Dict[str, Any]:
     _append_trace(state, "GoalNode")
-    proj = None
-    qr = state.get("quant_result") or {}
-    if isinstance(qr, dict):
-        proj = qr.get("projection")
-    if not isinstance(proj, dict):
-        # compute fallback to guarantee output for tests
-        goal: GoalInput = state.get("goal")
-        proj = tool_compute_goal_projection(goal.model_dump() if hasattr(goal, "model_dump") else dict(goal))
+    req = AgentRequest(
+        user_text=state.get("user_text") or "",
+        user_profile=state.get("user_profile") or UserProfile(),
+        session_id=state.get("session_id", "local"),
+        turn_id=state.get("turn_id", 0),
+        request_id=state.get("request_id"),
+        goal=state.get("goal"),
+        messages=state.get("messages") or [],
+    )
 
-    # Render small markdown with "Goal projection" header (tests assert this string)
-    scenarios = proj.get("scenarios", []) if isinstance(proj, dict) else []
-    base = scenarios[0] if scenarios else {}
-    fv = base.get("future_value")
-    hit = base.get("hit_target")
-
-    md = "## Goal projection\n"
-    if fv is not None:
-        md += f"- Projected future value: **{fv}**\n"
-    if hit is not None:
-        md += f"- Hit target: **{hit}**\n"
-    md += "\n### Notes\n- Numbers are computed deterministically (no LLM math)."
-
-    resp = AgentResponse(agent_name="GoalAgent", answer_md=md, citations=[], confidence="medium")
+    resp = GoalAgent().run(req)
     state["final"] = resp
     return state
 
@@ -260,6 +250,34 @@ def goal_node(state: Dict[str, Any]) -> Dict[str, Any]:
 # -----------------------------
 # Graph
 # -----------------------------
+
+
+def tax_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    _append_trace(state, "TaxNode")
+    req = AgentRequest(
+        user_text=state.get("user_text") or "",
+        user_profile=state.get("user_profile") or UserProfile(),
+        session_id=state.get("session_id", "local"),
+        turn_id=state.get("turn_id", 0),
+        request_id=state.get("request_id"),
+    )
+    resp = TaxAgent().run(req)
+    state["final"] = resp
+    return state
+
+
+def news_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    _append_trace(state, "NewsNode")
+    req = AgentRequest(
+        user_text=state.get("user_text") or "",
+        user_profile=state.get("user_profile") or UserProfile(),
+        session_id=state.get("session_id", "local"),
+        turn_id=state.get("turn_id", 0),
+        request_id=state.get("request_id"),
+    )
+    resp = NewsAgent().run(req)
+    state["final"] = resp
+    return state
 
 def build_graph():
     g = StateGraph(dict)
@@ -272,6 +290,9 @@ def build_graph():
     g.add_node("market_data", market_data_node)
     g.add_node("market_resp", market_response_node)
 
+    g.add_node("tax", tax_node)
+    g.add_node("news", news_node)
+
     g.add_node("quant", quant_compute_node)
     g.add_node("portfolio", portfolio_node)
     g.add_node("goal", goal_node)
@@ -281,12 +302,15 @@ def build_graph():
     # Route from router
     g.add_conditional_edges(
         "router",
-        lambda s: s.get("route", "FINANCE_QA"),
+        lambda s: s.get("route") or "FINANCE_QA",
         {
             "FINANCE_QA": "rag",
             "MARKET": "market_data",
             "PORTFOLIO": "market_data",
             "GOAL": "quant",
+            "TAX": "tax",
+            "NEWS": "news",
+            "CLARIFY": "financeqa",
         },
     )
 
@@ -310,5 +334,8 @@ def build_graph():
     )
     g.add_edge("goal", END)
     g.add_edge("portfolio", END)
+
+    g.add_edge("tax", END)
+    g.add_edge("news", END)
 
     return g.compile()
