@@ -14,8 +14,8 @@ from src.core.schemas import (
     QuantResult,
     RagResult,
     RouterDecision,
-    UserProfile,
     ToolCall,
+    UserProfile,
 )
 
 
@@ -27,45 +27,47 @@ class GraphState(TypedDict, total=False):
 
     user_text: str
     user_profile: UserProfile
+
+    # conversational memory
     memory_summary: str
+    memory_turns: List[Dict[str, str]]  # [{user, assistant}]
 
     route: RouterDecision
 
-    # Backwards-compatible simple trace + detailed trace events
     agent_trace: List[str]
     trace_events: List[AgentTraceEvent]
-
-    # Tooling trace
     tool_calls: List[ToolCall]
 
-    # Optional structured domain inputs
     portfolio: PortfolioInput
     goal: GoalInput
 
-    # Subsystem outputs
     rag_result: RagResult
     quant_result: QuantResult
     market_payload: Dict[str, Any]
 
-    # Responses
     responses: List[AgentResponse]
     final: AgentResponse
 
-    # Errors
     error: ErrorEnvelope
 
 
 class ConversationStateModel(BaseModel):
-    """Pydantic mirror of GraphState for validation / debugging."""
-    request_id: str
-    session_id: str
-    turn_id: int = 1
+    request_id: str = ""
+    session_id: str = ""
+    turn_id: int = 0
 
     user_text: str = ""
+    source_tab: Optional[str] = None
     user_profile: UserProfile = Field(default_factory=UserProfile)
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Memory
     memory_summary: str = ""
+    memory_turns: List[Dict[str, str]] = Field(default_factory=list)
 
     route: Optional[RouterDecision] = None
+    router_decision: Optional[RouterDecision] = None
 
     agent_trace: List[str] = Field(default_factory=list)
     trace_events: List[AgentTraceEvent] = Field(default_factory=list)

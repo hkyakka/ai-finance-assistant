@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, UTC
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import BaseModel, Field
+from pydantic.config import ConfigDict
 
 
 # -------------------------
@@ -23,7 +24,7 @@ class Citation(BaseModel):
 class ChatMessage(BaseModel):
     role: Literal["system", "user", "assistant", "tool"] = "user"
     content: str
-    ts: datetime = Field(default_factory=datetime.utcnow)
+    ts: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class UserProfile(BaseModel):
@@ -74,17 +75,22 @@ class MarketQuote(BaseModel):
     symbol: str
     price: float
     currency: str = "USD"
-    as_of: datetime = Field(default_factory=datetime.utcnow)
+    as_of: datetime = Field(default_factory=lambda: datetime.now(UTC))
     provider: Optional[str] = None
     from_cache: bool = False
     ttl_seconds: Optional[int] = None
+
+    # Backward/forward compatibility for agents that use `last_price`
+    @property
+    def last_price(self) -> float:
+        return float(self.price)
 
 
 class PriceSeries(BaseModel):
     symbol: str
     dates: List[str]           # ISO date strings
     close: List[float]
-    as_of: datetime = Field(default_factory=datetime.utcnow)
+    as_of: datetime = Field(default_factory=lambda: datetime.now(UTC))
     provider: Optional[str] = None
     from_cache: bool = False
 
@@ -178,12 +184,14 @@ ToolName = Literal[
 
 class ToolCall(BaseModel):
     call_id: str
-    tool_name: ToolName
-    args: Dict[str, Any] = Field(default_factory=dict)
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    tool_name: str
+    args: dict = {}
+    started_at: datetime
     ended_at: Optional[datetime] = None
     status: Literal["started", "ok", "error"] = "started"
+    result: Optional["ToolResult"] = None
     error: Optional[ErrorEnvelope] = None
+
 
 
 class ToolResult(BaseModel):
@@ -191,13 +199,13 @@ class ToolResult(BaseModel):
     tool_name: ToolName
     result: Optional[Any] = None
     error: Optional[ErrorEnvelope] = None
-    completed_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class AgentTraceEvent(BaseModel):
     node: str
     agent: str
-    ts: datetime = Field(default_factory=datetime.utcnow)
+    ts: datetime = Field(default_factory=lambda: datetime.now(UTC))
     info: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -224,13 +232,23 @@ class AgentRequest(BaseModel):
     memory_summary: Optional[str] = None
 
 class AgentResponse(BaseModel):
+    """Standard agent output.
+
+    Several stages (and the smoke scripts) attach `data` + `error`.
+    Make the model permissive to avoid breaking when agents evolve.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
     agent_name: str
     answer_md: str
+    data: Dict[str, Any] = Field(default_factory=dict)
     citations: List[Citation] = Field(default_factory=list)
     charts_payload: Optional[Dict[str, Any]] = None
     warnings: List[str] = Field(default_factory=list)
     data_freshness: Optional[Dict[str, Any]] = None
     confidence: Literal["high", "medium", "low"] = "medium"
+    error: Optional[Dict[str, Any]] = None
 
 
 # -------------------------
